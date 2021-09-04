@@ -1,6 +1,6 @@
 ﻿#NoEnv  ; Recommended for performance and compatibility with future AutoHotkey releases.
 SendMode Input  ; Recommended for new scripts due to its superior speed and reliability.
-SetWorkingDir %A_Desktop%  ; Ensures a consistent starting directory.
+SetWorkingDir %A_ScriptDir%  ; Ensures a consistent starting directory.
 #SingleInstance, force
 
 Gui, Color, Aqua
@@ -43,7 +43,6 @@ Gui, Add, Radio, x213 y175 vpng, .png
 ; Gui, Add, Radio, x213 y215 , .
 ; Gui, Add, Radio, x213 y235 , .
 ; Gui, Add, Radio, x213 y255 , .
-
 Gui, Add, Checkbox, x6 y265 Checked vKeepOriginal, Keep original file?
 Gui, Font, Bold s15
 Gui, Add, Button, x5 y285 h50 w290 gConvert, Convert
@@ -58,8 +57,16 @@ Locate:
 Convert:
 	Gui, Submit, NoHide
 
-	if !(RawFileLocation)
+	;checks if user input a path for the file
+	if !(RawFileLocation){
+		MsgBox, No file provided.
 		Return
+	}
+
+	if !(FileExist(RawFileLocation)){
+		MsgBox, File does not exist.
+		Return
+	}
 	
 	;splits the file location by spaces, replaces them with "`` " to have ahk turn it into "` ", then PowerShell recognize it as a real space
 	FileLocationSplit := StrSplit(RawFileLocation, " ", " ")
@@ -108,30 +115,48 @@ Convert:
 		ext := "gif"
 	else if (ico = 1)
 		ext := "ico"
-	else
+	else{
+		MsgBox, No extension selected.
 		Return
+	}
 	
-	;concatenates converted file locations and the new extension
+	;concatenates converted file locations and the new extensions
 	ConvertedFileLocation := ConvertedFileLocation . ext
-
 	SubStrStartingPos := InStr(RawFileLocation, ".", false, -1)
 	RawConvertedFileLocation := SubStr(RawFileLocation, 1, SubStrStartingPos)
 	RawConvertedFileLocation := RawConvertedFileLocation . ext
 	
-	;final conversion command
+	;splits A_WorkingDir by spaces, replaces them with "`` " to have ahk turn it into "` ", then PowerShell recognize it as a real space
+	WorkingDir := A_WorkingDir
+	FileLocationSplit := StrSplit(WorkingDir, " ", " ")
+	for index, element in FileLocationSplit{
+		if !(index = 1){
+			WorkingDir := WorkingDir . "`` " . element
+		} else{
+			WorkingDir := element
+		}
+	}
+
+	;runs final conversion command only if extensions are different
 	if (FileLocation != ConvertedFileLocation){
-		Run, PowerShell -Command ffmpeg -n -i %FileLocation% %ConvertedFileLocation%
+		Run, PowerShell -Command %WorkingDir%\ffmpeg.exe -n -i %FileLocation% %ConvertedFileLocation%
 	} else{
 		MsgBox, Input and output extensions are identical.
 		Return
 	}
 
-	;delete old file once powershell closes if KeepOriginal is unchecked
+	;deletes old file once powershell closes if KeepOriginal is unchecked and the new file exists
 	Sleep, 500
 	WinWaitClose, Windows PowerShell
-	if (KeepOriginal = 0) and FileExist(RawConvertedFileLocation){
-		FileDelete, %RawFileLocation%
+	if FileExist(RawConvertedFileLocation){
+		if  (KeepOriginal = 0){
+			FileDelete, %RawFileLocation%
+		}
+		MsgBox, Conversion succeeded.
+	} else{
+		MsgBox, Conversion failed.
 	}
+
 	Return
 
 ;makes the red "x" actually quit the script
