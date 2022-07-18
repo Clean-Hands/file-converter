@@ -2,6 +2,7 @@
 SendMode Input ; Recommended for new scripts due to its superior speed and reliability.
 SetWorkingDir %A_ScriptDir% ; Ensures a consistent starting directory.
 #SingleInstance, force
+#Include, utils.ahk
 
 Gui, Color, Aqua
 Gui, Font, s18 Bold Underline
@@ -71,6 +72,7 @@ Convert:
         Return
     }
 
+    ;disables all buttons/radios while conversion is happening
     disableAll()
 
     ;checks if user chose a folder or single file
@@ -83,9 +85,10 @@ Convert:
             Return
         }
 
-        ;resets booleans
+        ;resets booleans and error message
         success := false
         failure := false
+        errorMessage := "Error message: "
 
         ;loops through all files within the selected folder and attempts to convert them to the specified extension
         Loop, Files, %RawFileLocation%\*, R 
@@ -100,6 +103,20 @@ Convert:
                     FileLocation := element
                 }
             }
+
+            ;escapes problematic characters
+            FileLocation := StrReplace(FileLocation, "(", "``(")
+            FileLocation := StrReplace(FileLocation, ")", "``)")
+            FileLocation := StrReplace(FileLocation, "[", "``[")
+            FileLocation := StrReplace(FileLocation, "]", "``]")
+            FileLocation := StrReplace(FileLocation, "{", "``{")
+            FileLocation := StrReplace(FileLocation, "}", "``}")
+            FileLocation := StrReplace(FileLocation, "'", "``'")
+            FileLocation := StrReplace(FileLocation, "`", "```")
+            FileLocation := StrReplace(FileLocation, ",", "``,")
+            FileLocation := StrReplace(FileLocation, "&", "``&")
+            FileLocation := StrReplace(FileLocation, ";", "``;")
+
 
             ;cuts off the old extension
             SubStrStartingPos := InStr(FileLocation, ".", false, -1)
@@ -165,6 +182,8 @@ Convert:
             if (FileLocation != ConvertedFileLocation) {
                 Run, PowerShell -Command %WorkingDir%\ffmpeg.exe -n -i %FileLocation% %ConvertedFileLocation%
             } else {
+                if !failure
+                    errorMessage := errorMessage . "File(s) already in selected file format."
                 failure = true
             }
 
@@ -178,6 +197,8 @@ Convert:
                     }
                     success = true
                 } else {
+                    if !failure
+                        errorMessage := errorMessage . "File(s) are/were unable to be converted."
                     failure = true
                 }
             }
@@ -185,11 +206,11 @@ Convert:
 
         ;prints correct outcome statements
         if (success && failure) {
-            MsgBox, Conversion partially succeeded, some files may be unconverted.
+            MsgBox, Conversion partially succeeded, some files may be unconverted. %errorMessage%
         } else if (success) {
             MsgBox, Conversion succeeded.
         } else if (failure) {
-            MsgBox, Conversion failed.
+            MsgBox, Conversion failed. %errorMessage%
         } else {
             MsgBox, How did this happen
         }
@@ -213,6 +234,19 @@ Convert:
                 FileLocation := element
             }
         }
+
+        ;escapes problematic characters
+        FileLocation := StrReplace(FileLocation, "(", "``(")
+        FileLocation := StrReplace(FileLocation, ")", "``)")
+        FileLocation := StrReplace(FileLocation, "[", "``[")
+        FileLocation := StrReplace(FileLocation, "]", "``]")
+        FileLocation := StrReplace(FileLocation, "{", "``{")
+        FileLocation := StrReplace(FileLocation, "}", "``}")
+        FileLocation := StrReplace(FileLocation, "'", "``'")
+        FileLocation := StrReplace(FileLocation, "`", "```")
+        FileLocation := StrReplace(FileLocation, ",", "``,")
+        FileLocation := StrReplace(FileLocation, "&", "``&")
+        FileLocation := StrReplace(FileLocation, ";", "``;")
 
         ;cuts off the old extension
         SubStrStartingPos := InStr(FileLocation, ".", false, -1)
@@ -292,7 +326,7 @@ Convert:
             }
             MsgBox, Conversion succeeded.
         } else {
-            MsgBox, Conversion failed.
+            MsgBox, Conversion failed. %errorMessage%
         }
     }
     enableAll()
@@ -303,55 +337,3 @@ Return
 GuiClose:
 	ExitApp
 Return
-
-;disables all GUI elements
-disableAll() {
-    GuiControl, Disable, aif
-    GuiControl, Disable, flac
-    GuiControl, Disable, m4a
-    GuiControl, Disable, mp3
-    GuiControl, Disable, ogg
-    GuiControl, Disable, wav
-    GuiControl, Disable, Awebm
-    GuiControl, Disable, Vwebm
-    GuiControl, Disable, avi
-    GuiControl, Disable, flv
-    GuiControl, Disable, mkv
-    GuiControl, Disable, mov
-    GuiControl, Disable, mp4
-    GuiControl, Disable, gif
-    GuiControl, Disable, ico
-    GuiControl, Disable, jpg
-    GuiControl, Disable, png
-    GuiControl, Disable, Convert
-    GuiControl, Disable, KeepOriginal
-    GuiControl, Disable, LocateFile
-    GuiControl, Disable, LocateFolder
-    GuiControl, Disable, RawFileLocation
-}
-
-;enables all GUI elements
-enableAll() {
-    GuiControl, Enable, aif
-    GuiControl, Enable, flac
-    GuiControl, Enable, m4a
-    GuiControl, Enable, mp3
-    GuiControl, Enable, ogg
-    GuiControl, Enable, wav
-    GuiControl, Enable, Awebm
-    GuiControl, Enable, Vwebm
-    GuiControl, Enable, avi
-    GuiControl, Enable, flv
-    GuiControl, Enable, mkv
-    GuiControl, Enable, mov
-    GuiControl, Enable, mp4
-    GuiControl, Enable, gif
-    GuiControl, Enable, ico
-    GuiControl, Enable, jpg
-    GuiControl, Enable, png
-    GuiControl, Enable, Convert
-    GuiControl, Enable, KeepOriginal
-    GuiControl, Enable, LocateFile
-    GuiControl, Enable, LocateFolder
-    GuiControl, Enable, RawFileLocation
-}
